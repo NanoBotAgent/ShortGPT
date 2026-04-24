@@ -8,6 +8,23 @@ from gui.ui_tab_config import ConfigUI
 from shortGPT.utils.cli import CLI
 
 
+def _patch_gradio_api_info():
+    if getattr(gr.Blocks.get_api_info, "_shortgpt_safe", False):
+        return
+
+    original_get_api_info = gr.Blocks.get_api_info
+
+    def safe_get_api_info(self, *args, **kwargs):
+        try:
+            return original_get_api_info(self, *args, **kwargs)
+        except Exception as exc:
+            print(f"Warning: falling back to empty Gradio API info: {exc}")
+            return {"named_endpoints": {}, "unnamed_endpoints": {}}
+
+    safe_get_api_info._shortgpt_safe = True
+    gr.Blocks.get_api_info = safe_get_api_info
+
+
 class ShortGptUI(AbstractBaseUI):
     '''Class for the GUI. This class is responsible for creating the UI and launching the server.'''
 
@@ -29,6 +46,7 @@ class ShortGptUI(AbstractBaseUI):
 
     def launch(self):
         '''Launch the server'''
+        _patch_gradio_api_info()
         shortGptUI = self.create_interface()
         if not getattr(self, 'colab', False):
                     print("\n\n********************* STARTING SHORGPT **********************")
