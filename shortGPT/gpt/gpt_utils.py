@@ -1,30 +1,30 @@
 import json
 import os
 import re
+from pathlib import Path
 from time import sleep, time
 
 import openai
 import tiktoken
 import yaml
+from openai import OpenAI
 
 from shortGPT.config.api_db import ApiKeyManager
 
 
 def num_tokens_from_messages(texts, model="gpt-4o-mini"):
-    """Returns the number of tokens used by a list of messages."""
     try:
         encoding = tiktoken.encoding_for_model(model)
     except KeyError:
         encoding = tiktoken.get_encoding("cl100k_base")
-    if model == "gpt-4o-mini":  # note: future models may deviate from this
+    if model == "gpt-4o-mini":
         if isinstance(texts, str):
             texts = [texts]
         score = 0
         for text in texts:
             score += 4 + len(encoding.encode(text))
         return score
-    else:
-        raise NotImplementedError(f"""num_tokens_from_messages() is not presently implemented for model {model}.
+    raise NotImplementedError(f"""num_tokens_from_messages() is not presently implemented for model {model}.
         See https://github.com/openai/openai-python/blob/main/chatml.md for information""")
 
 
@@ -41,12 +41,10 @@ def get_first_number(string):
     match = re.search(pattern, string)
     if match:
         return int(match.group())
-    else:
-        return None
+    return None
 
 
 def load_yaml_file(file_path: str) -> dict:
-    """Reads and returns the contents of a YAML file as dictionary"""
     return yaml.safe_load(open_file(file_path))
 
 
@@ -55,7 +53,6 @@ def load_json_file(file_path):
         json_data = json.load(f)
     return json_data
 
-from pathlib import Path
 
 def load_local_yaml_prompt(file_path):
     _here = Path(__file__).parent
@@ -67,26 +64,27 @@ def load_local_yaml_prompt(file_path):
 def open_file(filepath):
     with open(filepath, 'r', encoding='utf-8') as infile:
         return infile.read()
-from openai import OpenAI
+
 
 def llm_completion(chat_prompt="", system="", temp=0.7, max_tokens=2000, remove_nl=True, conversation=None):
-    openai_key= ApiKeyManager.get_api_key("OPENAI_API_KEY")
+    openai_key = ApiKeyManager.get_api_key("OPENAI_API_KEY")
+    openai_base_url = ApiKeyManager.get_api_key("OPENAI_BASE_URL").strip()
     gemini_key = ApiKeyManager.get_api_key("GEMINI_API_KEY")
-    if gemini_key:
-        client = OpenAI( 
-            api_key=gemini_key,
-            base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
-        )
-        model="gemini-2.0-flash-lite-preview-02-05"
-    elif openai_key:
-        client = OpenAI( api_key=openai_key)
-        model="gpt-4o-mini"
+    if openai_key:
+        client_kwargs = {"api_key": openai_key}
+        if openai_base_url:
+            client_kwargs["base_url"] = openai_base_url
+        client = OpenAI(**client_kwargs)
+        model = "gpt-4o-mini"
+    elif gemini_key:
+        client = OpenAI(api_key=gemini_key, base_url="https://generativelanguage.googleapis.com/v1beta/openai/")
+        model = "gemini-2.0-flash-lite-preview-02-05"
     else:
         raise Exception("No OpenAI or Gemini API Key found for LLM request")
     max_retry = 5
     retry = 0
     error = ""
-    for i in range(max_retry):
+    for _ in range(max_retry):
         try:
             if conversation:
                 messages = conversation
@@ -101,7 +99,7 @@ def llm_completion(chat_prompt="", system="", temp=0.7, max_tokens=2000, remove_
                 max_tokens=max_tokens,
                 temperature=temp,
                 timeout=30
-                )
+            )
             text = response.choices[0].message.content.strip()
             if remove_nl:
                 text = re.sub('\s+', ' ', text)
@@ -109,7 +107,7 @@ def llm_completion(chat_prompt="", system="", temp=0.7, max_tokens=2000, remove_
             if not os.path.exists('.logs/gpt_logs'):
                 os.makedirs('.logs/gpt_logs')
             with open('.logs/gpt_logs/%s' % filename, 'w', encoding='utf-8') as outfile:
-                outfile.write(f"System prompt: ===\n{system}\n===\n"+f"Chat prompt: ===\n{chat_prompt}\n===\n" + f'RESPONSE:\n====\n{text}\n===\n')
+                outfile.write(f"System prompt: ===\n{system}\n===\n" + f"Chat prompt: ===\n{chat_prompt}\n===\n" + f'RESPONSE:\n====\n{text}\n===\n')
             return text
         except Exception as oops:
             retry += 1

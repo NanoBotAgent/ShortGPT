@@ -5,15 +5,15 @@ import subprocess
 
 import gradio as gr
 
+from gui.ui_texts import t
 from shortGPT.api_utils.eleven_api import ElevenLabsAPI
 from shortGPT.config.api_db import ApiKeyManager
 from shortGPT.config.asset_db import AssetDatabase
 
 
 class AssetComponentsUtils:
-    EDGE_TTS = "Free EdgeTTS (lower quality)"
-    ELEVEN_TTS = "ElevenLabs(Very High Quality)"
-
+    EDGE_TTS = t("free_edge_tts")
+    ELEVEN_TTS = t("eleven_tts")
 
     instance_background_video_checkbox = None
     instance_background_music_checkbox = None
@@ -54,8 +54,8 @@ class AssetComponentsUtils:
             cls.instance_background_video_checkbox = gr.CheckboxGroup(
                 choices=choices,
                 interactive=True,
-                label="Choose background video",
-                value=random.choice(choices)
+                label=t("choose_background_video"),
+                value=random.choice(choices) if choices else None
             )
         return cls.instance_background_video_checkbox
 
@@ -66,20 +66,20 @@ class AssetComponentsUtils:
             cls.instance_background_music_checkbox = gr.CheckboxGroup(
                 choices=choices,
                 interactive=True,
-                label="Choose background music",
-                value=random.choice(choices)
+                label=t("choose_background_music"),
+                value=random.choice(choices) if choices else None
             )
         return cls.instance_background_music_checkbox
 
     @classmethod
     def voiceChoice(cls, provider: str = None):
-        if provider == None:
+        if provider is None:
             provider = cls.ELEVEN_TTS
         if cls.instance_voiceChoice.get(provider, None) is None:
             if provider == cls.ELEVEN_TTS:
                 cls.instance_voiceChoice[provider] = gr.Radio(
                     cls.getElevenlabsVoices(),
-                    label="Elevenlabs voice",
+                    label=t("eleven_voice"),
                     value="Chris",
                     interactive=True,
                 )
@@ -87,13 +87,13 @@ class AssetComponentsUtils:
 
     @classmethod
     def voiceChoiceTranslation(cls, provider: str = None):
-        if provider == None:
+        if provider is None:
             provider = cls.ELEVEN_TTS
         if cls.instance_voiceChoiceTranslation.get(provider, None) is None:
             if provider == cls.ELEVEN_TTS:
                 cls.instance_voiceChoiceTranslation[provider] = gr.Radio(
                     cls.getElevenlabsVoices(),
-                    label="Elevenlabs voice",
+                    label=t("eleven_voice"),
                     value="Chris",
                     interactive=True,
                 )

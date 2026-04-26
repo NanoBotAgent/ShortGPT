@@ -17,8 +17,7 @@ COPY . /app
 
 EXPOSE 31415
 
-# Define any environment variables
-# ENV KEY Value
+ENV SHORTGPT_UI_LANGUAGE=zh
 
 # Print environment variables (for debugging purposes, you can remove this line if not needed)
 RUN ["printenv"]
